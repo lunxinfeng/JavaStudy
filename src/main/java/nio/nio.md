@@ -69,10 +69,12 @@ mark和reset是搭配来使用的，当你调用reset方法时，可以将positi
         return this;
     }
 ```
-- slice：创建Buffer的子序列：它保持limit和position不变。
-- duplicate：复制创建一个Buffer的浅副本：它保持limit和position不变。
+- slice：根据原Buffer得position和limit进行切片，创建Buffer的子序列。注意子序列和原Buffer是同一个内存区间，修改任何一个另一个都会变化。
+但是两个Buffer得position、limit和mark是互相独立的。新的Buffer的position为0，limit和capacity为它的长度。
+- duplicate：复制创建一个Buffer的浅副本，它保持limit和position不变。
 ### 只读Buffer
-每个Buffer都是可读的，但并不是每个Buffer都是可写的。Buffer是否只读可以通过isReadOnly方法来判断。
+每个Buffer都是可读的，但并不是每个Buffer都是可写的。可以通过asReadOnlyBuffer方法将一个Buffer转换为只读Buffer。Buffer是否只读可以通
+过isReadOnly方法来判断。
 
 只读Buffer不允许改变其内容，否则抛出ReadOnlyBufferException异常，但可以改变mark、position、limit。
 ### 线程安全
