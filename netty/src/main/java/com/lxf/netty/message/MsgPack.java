@@ -1,12 +1,14 @@
 package com.lxf.netty.message;
 
+import com.lxf.netty.i.Message;
+
 import java.io.Serializable;
 
 /**
  * @author Herman.Xiong
  * @date 2014年6月11日 11:31:45
  */
-public class MsgPack implements Serializable {
+public class MsgPack implements Serializable, Message {
     /**
      * 序列化和反序列化的版本号
      */
@@ -63,15 +65,6 @@ public class MsgPack implements Serializable {
 
     public void setMsgPack(String msgPack) {
         this.msgPack = msgPack;
-    }
-
-    public MsgPack(int msgLength, int msgMethod, int msgGroupID, int msgToID,
-                   String msgPack) {
-        this.msgLength = msgLength;
-        this.msgMethod = msgMethod;
-        this.msgPack = msgPack;
-        this.msgGroupID = msgGroupID;
-        this.msgToID = msgToID;
     }
 
     @Override

@@ -5,8 +5,10 @@ import com.lxf.netty.callback.MessageCallBack;
 import com.lxf.netty.codec.MessageDecoder;
 import com.lxf.netty.codec.MessageEncoder;
 import com.lxf.netty.handler.ClientHandler;
+import com.lxf.netty.i.ClientManager;
+import com.lxf.netty.interpolator.Interpolator;
+import com.lxf.netty.interpolator.YZInterpolator;
 import com.lxf.netty.log.Log;
-import com.lxf.netty.message.MessageGenerator;
 import com.lxf.netty.message.MsgPack;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -17,30 +19,43 @@ import io.netty.handler.timeout.IdleStateHandler;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 客户端
+ */
+public class Client implements ChannelFutureListener, ClientManager<MsgPack> {
 
-public class Client implements ChannelFutureListener {
-
-    private static final int reConnectNum = 5;
+    //最大重连次数
+    private int reConnectNum = 5;
+    //当前重连次数
     private int reConnectIndex;
-    public Channel channel;//通道
-    private Bootstrap bootstrap;//启动器
+    //通道
+    private Channel channel;
+    //启动器
+    private Bootstrap bootstrap;
+    //服务器域名
     private String host;
+    //服务器端口
     private int port;
+    //连接监听
     private ConnectListener connectListener;
+    //消息监听
     private MessageCallBack messageCallBack;
+    //插值器，重连频率
+    private Interpolator interpolator;
 
-    public Client(String host, int port) {
+    private Client(String host, int port) {
         this.host = host;
         this.port = port;
         this.reConnectIndex = 0;
+        this.interpolator = new YZInterpolator();
 
         bootstrap = new Bootstrap()
                 .group(new NioEventLoopGroup())
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS,8000)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 8000)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
+                    protected void initChannel(SocketChannel ch) {
                         ch.pipeline()
                                 .addLast("decoder", new MessageDecoder())
                                 .addLast("encoder", new MessageEncoder())
@@ -50,15 +65,8 @@ public class Client implements ChannelFutureListener {
                 });
     }
 
-    public void setConnectListener(ConnectListener connectListener) {
-        this.connectListener = connectListener;
-    }
-
-    public void setMessageCallBack(MessageCallBack messageCallBack) {
-        this.messageCallBack = messageCallBack;
-    }
-
-    public void connectServer() {
+    @Override
+    public void connect() {
         try {
             disConnect();
 
@@ -70,6 +78,7 @@ public class Client implements ChannelFutureListener {
         }
     }
 
+    @Override
     public void disConnect() {
         if (channel != null) {
             channel.close();
@@ -77,18 +86,15 @@ public class Client implements ChannelFutureListener {
         }
     }
 
+    @Override
     public void sendMessage(MsgPack msgPack) {
         if (channel != null && channel.isWritable()) {
             channel.writeAndFlush(msgPack);
         }
     }
 
-    public void sendMessage(int method, int groupId, int toId, String msg) {
-        sendMessage(MessageGenerator.message(method, groupId, toId, msg));
-    }
-
     @Override
-    public void operationComplete(ChannelFuture future) throws Exception {
+    public void operationComplete(ChannelFuture future) {
         if (future.isSuccess()) {
             Log.warn("连接服务器成功：" + port);
             channel = future.channel();
@@ -96,23 +102,21 @@ public class Client implements ChannelFutureListener {
             if (connectListener != null)
                 connectListener.onConnectSuccess(this);
         } else {
+            Log.warn("连接服务器失败：" + port);
             reConnect(future.channel().eventLoop());
         }
     }
 
+    @Override
     public void reConnect(EventLoop eventLoop) {
         if (reConnectIndex <= reConnectNum) {
             //重连
-            Log.warn("连接服务器失败：" + port);
             reConnectIndex++;
             eventLoop
-                    .schedule(new Runnable() {
-                        @Override
-                        public void run() {
-                            Log.warn("开始重连：" + port);
-                            connectServer();
-                        }
-                    }, 1000 * reConnectIndex * reConnectIndex, TimeUnit.MILLISECONDS);
+                    .schedule(() -> {
+                        Log.warn("开始重连：" + port);
+                        connect();
+                    }, interpolator.interpolator(reConnectIndex, reConnectNum), TimeUnit.MILLISECONDS);
         } else {
             Log.warn("连接服务器失败，重连后依然失败：" + port);
             if (connectListener != null)
@@ -120,9 +124,47 @@ public class Client implements ChannelFutureListener {
         }
     }
 
-    public void receiveMessage(MsgPack msgPack){
-        if (messageCallBack!=null)
+    @Override
+    public void receiveMessage(MsgPack msgPack) {
+        if (messageCallBack != null)
             messageCallBack.onReceiveMessage(msgPack);
     }
 
+
+    static class Builder implements ClientBuilder<Builder, Client> {
+        private Client client;
+
+        public Builder(String host, int port) {
+            client = new Client(host, port);
+        }
+
+        @Override
+        public Builder connectListener(ConnectListener connectListener) {
+            client.connectListener = connectListener;
+            return this;
+        }
+
+        @Override
+        public Builder messageListener(MessageCallBack messageCallBack) {
+            client.messageCallBack = messageCallBack;
+            return this;
+        }
+
+        @Override
+        public Builder reConnectNumMax(int num) {
+            client.reConnectNum = num;
+            return this;
+        }
+
+        @Override
+        public Builder reConnectInterval(Interpolator interpolator) {
+            client.interpolator = interpolator;
+            return this;
+        }
+
+        @Override
+        public Client build() {
+            return client;
+        }
+    }
 }

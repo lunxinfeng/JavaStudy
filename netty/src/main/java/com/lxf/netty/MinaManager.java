@@ -2,13 +2,14 @@ package com.lxf.netty;
 
 import com.lxf.netty.callback.ConnectListener;
 import com.lxf.netty.callback.MessageCallBack;
+import com.lxf.netty.message.MessageGenerator;
 
 public class MinaManager {
 
     /**
      * mina地址
      */
-  private static final String MINA_ADDRESS = "47.99.41.182";
+    private static final String MINA_ADDRESS = "47.99.41.182";
     /**
      * 公共端端口
      */
@@ -28,33 +29,35 @@ public class MinaManager {
 //    public static MessageCallBack messageCallBackPvp;
 
 
-    public static void connectServer(int port,ConnectListener connectListener,MessageCallBack messageCallBack) {
+    public static void connectServer(int port, ConnectListener connectListener, MessageCallBack messageCallBack) {
         switch (port) {
             case PORT_PUBLIC:
-                connectPublicServer(connectListener,messageCallBack);
+                connectPublicServer(connectListener, messageCallBack);
                 break;
             case PORT_PVP:
-                connectPvpServer(connectListener,messageCallBack);
+                connectPvpServer(connectListener, messageCallBack);
                 break;
         }
     }
 
-    private static void connectPublicServer(ConnectListener connectListener,MessageCallBack messageCallBack) {
-        if (client_public == null){
-            client_public = new Client(MINA_ADDRESS, PORT_PUBLIC);
-            client_public.setConnectListener(connectListener);
-            client_public.setMessageCallBack(messageCallBack);
+    private static void connectPublicServer(ConnectListener connectListener, MessageCallBack messageCallBack) {
+        if (client_public == null) {
+            client_public = new Client.Builder(MINA_ADDRESS, PORT_PUBLIC)
+                    .connectListener(connectListener)
+                    .messageListener(messageCallBack)
+                    .build();
         }
-        client_public.connectServer();
+        client_public.connect();
     }
 
-    private static void connectPvpServer(ConnectListener connectListener,MessageCallBack messageCallBack) {
-        if (client_pvp == null){
-            client_pvp = new Client(MINA_ADDRESS, PORT_PVP);
-            client_pvp.setConnectListener(connectListener);
-            client_pvp.setMessageCallBack(messageCallBack);
+    private static void connectPvpServer(ConnectListener connectListener, MessageCallBack messageCallBack) {
+        if (client_pvp == null) {
+            client_pvp = new Client.Builder(MINA_ADDRESS, PORT_PVP)
+                    .connectListener(connectListener)
+                    .messageListener(messageCallBack)
+                    .build();
         }
-        client_pvp.connectServer();
+        client_pvp.connect();
     }
 
     public static void disConnect(int port) {
@@ -69,13 +72,13 @@ public class MinaManager {
     }
 
     public static void minaSend(int method, int gameId, int otherUser, String msg, int port) {
-            switch (port) {
-                case PORT_PUBLIC:
-                    client_public.sendMessage(method,gameId,otherUser,msg);
-                    break;
-                case PORT_PVP:
-                    client_pvp.sendMessage(method,gameId,otherUser,msg);
-                    break;
-            }
+        switch (port) {
+            case PORT_PUBLIC:
+                client_public.sendMessage(MessageGenerator.message(method, gameId, otherUser, msg));
+                break;
+            case PORT_PVP:
+                client_pvp.sendMessage(MessageGenerator.message(method, gameId, otherUser, msg));
+                break;
+        }
     }
 }

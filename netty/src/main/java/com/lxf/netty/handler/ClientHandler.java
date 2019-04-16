@@ -1,6 +1,6 @@
 package com.lxf.netty.handler;
 
-import com.lxf.netty.Client;
+import com.lxf.netty.i.ClientManager;
 import com.lxf.netty.message.MessageGenerator;
 import com.lxf.netty.message.MsgPack;
 import com.lxf.netty.log.Log;
@@ -8,12 +8,17 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 
+import java.util.LinkedList;
+import java.util.concurrent.TimeUnit;
+
 
 public class ClientHandler extends SimpleChannelInboundHandler<MsgPack> {
-    private Client client;
+    //连接管理
+    private ClientManager<MsgPack> clientManager;
+    private LinkedList<MsgPack> messageList = new LinkedList<>();
 
-    public ClientHandler(Client client) {
-        this.client = client;
+    public ClientHandler(ClientManager<MsgPack> clientManager) {
+        this.clientManager = clientManager;
     }
 
     @Override
@@ -32,30 +37,38 @@ public class ClientHandler extends SimpleChannelInboundHandler<MsgPack> {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
         Log.info("channelActive");
+
+        ctx.executor().scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                if (messageList.size() > 0) {
+                    clientManager.sendMessage(messageList.getFirst());
+                }
+            }
+        },3000,3000, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
         Log.warn("channelInactive");
-        client.reConnect(ctx.channel().eventLoop());
+        clientManager.reConnect(ctx.channel().eventLoop());
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MsgPack msg) {
         Log.info("接收到信息：" + msg.toString());
-        client.receiveMessage(msg);
+        clientManager.receiveMessage(msg);
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         super.userEventTriggered(ctx, evt);
-        if (evt instanceof IdleStateEvent){
-            switch (((IdleStateEvent) evt).state()){
+        if (evt instanceof IdleStateEvent) {
+            switch (((IdleStateEvent) evt).state()) {
                 case READER_IDLE:
                     Log.warn("读空闲");
-                    //重连
-                    client.connectServer();
+                    ctx.close();
                     break;
                 case WRITER_IDLE:
                     Log.warn("写空闲");
