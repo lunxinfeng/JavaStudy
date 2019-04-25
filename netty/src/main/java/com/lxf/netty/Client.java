@@ -131,7 +131,7 @@ public class Client implements ChannelFutureListener, ClientManager<MsgPack> {
     }
 
 
-    static class Builder implements ClientBuilder<Builder, Client> {
+    public static class Builder implements ClientBuilder<Builder, Client> {
         private Client client;
 
         public Builder(String host, int port) {

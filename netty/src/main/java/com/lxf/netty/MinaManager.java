@@ -71,14 +71,14 @@ public class MinaManager {
         }
     }
 
-    public static void minaSend(int method, int gameId, int otherUser, String msg, int port) {
-        switch (port) {
-            case PORT_PUBLIC:
-                client_public.sendMessage(MessageGenerator.message(method, gameId, otherUser, msg));
-                break;
-            case PORT_PVP:
-                client_pvp.sendMessage(MessageGenerator.message(method, gameId, otherUser, msg));
-                break;
-        }
-    }
+//    public static void minaSend(int method, int gameId, int otherUser, String msg, int port) {
+//        switch (port) {
+//            case PORT_PUBLIC:
+//                client_public.sendMessage(MessageGenerator.message(method, gameId, otherUser, msg));
+//                break;
+//            case PORT_PVP:
+//                client_pvp.sendMessage(MessageGenerator.message(method, gameId, otherUser, msg));
+//                break;
+//        }
+//    }
 }

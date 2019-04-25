@@ -17,5 +17,8 @@ public class MessageEncoder extends MessageToByteEncoder<MsgPack> {
         out.writeIntLE(msg.getMsgToID());
         out.writeBytes(msg.getMsgPack().getBytes(Charset.forName("utf-8")));
 
+        out.writeIntLE(msg.getId().getBytes(Charset.forName("utf-8")).length);
+        out.writeBytes(msg.getId().getBytes(Charset.forName("utf-8")));
+        out.writeIntLE(msg.getType());
     }
 }

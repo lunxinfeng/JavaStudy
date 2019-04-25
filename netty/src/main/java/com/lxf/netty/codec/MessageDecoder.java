@@ -38,6 +38,13 @@ public class MessageDecoder extends ByteToMessageDecoder {
         byte[] msg = new byte[in.getIntLE(0)];
         in.readBytes(msg);
         msgPack.setMsgPack(new String(msg));
+
+        int idLength = in.readIntLE();
+        byte[] ids = new byte[idLength];
+        in.readBytes(ids);
+        msgPack.setId(new String(ids));
+        msgPack.setType(in.readIntLE());
+
         out.add(msgPack);
     }
 

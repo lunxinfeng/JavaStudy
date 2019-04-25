@@ -24,6 +24,40 @@ public class MsgPack implements Serializable, Message {
     // 消息包内容
     private String msgPack;
 
+    /**
+     * 唯一标识：可以 时间戳+用户id，用来去重
+     */
+    private String id;
+    /**
+     * 消息类型：
+     * A发送消息给B的流程
+     * 1.A请求服务器，发送消息
+     * 2.服务器响应A，表示自己收到了，通过id来鉴别是否是重发信息
+     * 3.服务器转发给B
+     * 4.B发送确认消息给服务器，表示自己收到
+     * 5.服务器响应B，表示自己收到
+     * 6.服务器通知A，B接收到了信息
+     *
+     * 如果A一段时间没有收到6，重发
+     */
+    private int type;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public int getType() {
+        return type;
+    }
+
+    public void setType(int type) {
+        this.type = type;
+    }
+
     public MsgPack() {
     }
 
@@ -69,9 +103,14 @@ public class MsgPack implements Serializable, Message {
 
     @Override
     public String toString() {
-        return "MsgPack [msgLength=" + msgLength + ", msgMethod=" + msgMethod
-                + ", msgGroupID=" + msgGroupID + ", msgToID=" + msgToID
-                + ", msgPack=" + msgPack + "]";
+        return "MsgPack{" +
+                "msgLength=" + msgLength +
+                ", msgMethod=" + msgMethod +
+                ", msgGroupID=" + msgGroupID +
+                ", msgToID=" + msgToID +
+                ", msgPack='" + msgPack + '\'' +
+                ", id='" + id + '\'' +
+                ", type=" + type +
+                '}';
     }
-
 }
