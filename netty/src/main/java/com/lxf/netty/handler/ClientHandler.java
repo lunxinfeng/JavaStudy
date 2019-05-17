@@ -8,14 +8,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 
-import java.util.LinkedList;
-import java.util.concurrent.TimeUnit;
-
 
 public class ClientHandler extends SimpleChannelInboundHandler<MsgPack> {
     //连接管理
     private ClientManager<MsgPack> clientManager;
-    private LinkedList<MsgPack> messageList = new LinkedList<>();
 
     public ClientHandler(ClientManager<MsgPack> clientManager) {
         this.clientManager = clientManager;
@@ -37,27 +33,19 @@ public class ClientHandler extends SimpleChannelInboundHandler<MsgPack> {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
         Log.info("channelActive");
-
-        ctx.executor().scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                if (messageList.size() > 0) {
-                    clientManager.sendMessage(messageList.getFirst());
-                }
-            }
-        },3000,3000, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         super.channelInactive(ctx);
         Log.warn("channelInactive");
-        clientManager.reConnect(ctx.channel().eventLoop());
+//        clientManager.reConnect(ctx.channel().eventLoop());
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MsgPack msg) {
         Log.info("接收到信息：" + msg.toString());
+        if (msg.getMsgMethod() == 0) return;
         clientManager.receiveMessage(msg);
     }
 

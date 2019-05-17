@@ -9,6 +9,11 @@ public interface ConnectListener {
     void onConnectSuccess(Client client);
 
     /**
+     * 连接断开，正在重连
+     */
+    void onReConnect();
+
+    /**
      * 连接失败，重连后依然失败
      */
     void onConnectFail();

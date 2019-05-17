@@ -42,6 +42,8 @@ public class Client implements ChannelFutureListener, ClientManager<MsgPack> {
     private MessageCallBack messageCallBack;
     //插值器，重连频率
     private Interpolator interpolator;
+    //是否主动断开连接
+    private boolean disConnectByUser = false;
 
     private Client(String host, int port) {
         this.host = host;
@@ -68,21 +70,31 @@ public class Client implements ChannelFutureListener, ClientManager<MsgPack> {
     @Override
     public void connect() {
         try {
-            disConnect();
-
-            bootstrap.connect(host, port)
-                    .sync()
-                    .addListener(this);
+            ChannelFuture future = bootstrap.connect(host, port)
+                    .addListener(this)
+                    .sync();//阻塞连接
+            future.channel().closeFuture().sync();//断开监听
         } catch (InterruptedException e) {
             e.printStackTrace();
+        } finally {
+            if (disConnectByUser){
+                //释放NIO线程组
+                bootstrap.config().group().shutdownGracefully();
+            }else{
+                if (connectListener != null)
+                    connectListener.onReConnect();
+                reConnect(bootstrap.config().group().next());
+            }
         }
     }
 
     @Override
     public void disConnect() {
         if (channel != null) {
+            disConnectByUser = true;
             channel.close();
             channel.disconnect();
+            Log.warn("主动断开连接：" + port);
         }
     }
 
@@ -97,28 +109,33 @@ public class Client implements ChannelFutureListener, ClientManager<MsgPack> {
     public void operationComplete(ChannelFuture future) {
         if (future.isSuccess()) {
             Log.warn("连接服务器成功：" + port);
+            disConnectByUser = false;
             channel = future.channel();
             reConnectIndex = 0;
             if (connectListener != null)
                 connectListener.onConnectSuccess(this);
         } else {
             Log.warn("连接服务器失败：" + port);
-            reConnect(future.channel().eventLoop());
+//            reConnect(future.channel().eventLoop());
         }
     }
 
     @Override
     public void reConnect(EventLoop eventLoop) {
-        if (reConnectIndex <= reConnectNum) {
+        if (reConnectIndex < reConnectNum) {
             //重连
             reConnectIndex++;
             eventLoop
-                    .schedule(() -> {
-                        Log.warn("开始重连：" + port);
-                        connect();
+                    .schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.warn("开始重连：" + reConnectIndex + "\t" + port);
+                            connect();
+                        }
                     }, interpolator.interpolator(reConnectIndex, reConnectNum), TimeUnit.MILLISECONDS);
         } else {
             Log.warn("连接服务器失败，重连后依然失败：" + port);
+            disConnectByUser = true;
             if (connectListener != null)
                 connectListener.onConnectFail();
         }
