@@ -7,7 +7,7 @@ import com.lxf.netty.codec.MessageEncoder;
 import com.lxf.netty.handler.ClientHandler;
 import com.lxf.netty.i.ClientManager;
 import com.lxf.netty.interpolator.Interpolator;
-import com.lxf.netty.interpolator.YZInterpolator;
+import com.lxf.netty.interpolator.DefaultInterpolator;
 import com.lxf.netty.log.Log;
 import com.lxf.netty.message.MsgPack;
 import io.netty.bootstrap.Bootstrap;
@@ -49,7 +49,7 @@ public class Client implements ChannelFutureListener, ClientManager<MsgPack> {
         this.host = host;
         this.port = port;
         this.reConnectIndex = 0;
-        this.interpolator = new YZInterpolator();
+        this.interpolator = new DefaultInterpolator();
 
         bootstrap = new Bootstrap()
                 .group(new NioEventLoopGroup())
